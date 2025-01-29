@@ -19,10 +19,10 @@ class SemiAdaptative:
         
         # special case: only one u
         if len(u_edges_sorted) == 1:
-            # v, u, p = u_edges_sorted[0]
-            # if random.uniform(0, 1) < p:
-            #     self.first_success[u] = True
-            #     return u
+            v, u, p = u_edges_sorted[0]
+            if random.uniform(0, 1) < p and u not in set_u:
+                self.first_success[u] = True
+                return u
             
             return None
 
@@ -37,10 +37,12 @@ class SemiAdaptative:
             if random.uniform(0, 1) < p1:
                 self.first_success[u1] = True
                 selected_u = u1
+                
         elif u1 in set_u and self.first_success[u1] == False:
             # simulate matching u1 and v
             if random.uniform(0, 1) < p1:
                 self.first_success[u1] = True
+
         elif u1 in set_u and self.first_success[u1] == True and u2 not in set_u:
             # match u2 and v
            selected_u = u2
@@ -49,7 +51,10 @@ class SemiAdaptative:
         self.w[u1] = self.w[u1] + (1 - self.w[u1]) * p1
         self.w[u2] = p2 * self.w[u1] + (1 - p2) * self.w[u2]
 
-        return selected_u
+        if selected_u not in set_u:
+            return selected_u
+        
+        return None
 
 
 def get_weight_for_u(p, u):
