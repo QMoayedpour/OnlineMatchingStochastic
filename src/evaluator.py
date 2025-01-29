@@ -21,7 +21,7 @@ class OnlineMatchingEvaluator:
     def run(self):
         """ Execute l'évaluation en soumettant chaque v séquentiellement au modèle.
         :return score: Nombre de match par le modèle """
-
+        self.score = 0
         V = [node for node, data in self.graph.nodes(data=True) if data['bipartite'] == 1]
 
         for v in V:
@@ -38,7 +38,7 @@ class OnlineMatchingEvaluator:
             if chosen_u and (v, chosen_u, self.graph[v][chosen_u]['weight']) in edges:
                 success = random.uniform(0, 1) < self.graph[v][chosen_u]['weight']
 
-                if success and (chosen_u not in self.successful_assignments or not self.successful_assignments[chosen_u]):
+                if success and chosen_u not in self.successful_assignments:
                     self.score += 1
                     self.matched.add((v, chosen_u))
                     self.successful_assignments[chosen_u] = True 

@@ -40,5 +40,5 @@ class BudgetedAllocationSolver:
 
         allocation = {(u, v): x[u, v].varValue for (u, v) in self.edges if x[u, v].varValue > 0}
         utility = sum(Lu_capped[u].varValue for u in self.U)
-        
+
         return allocation, utility

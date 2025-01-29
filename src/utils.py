@@ -1,6 +1,7 @@
 import networkx as nx
 import random
 import numpy as np
+import pandas as pd
 
 
 def generate_bipartite_erdos_graph(n_U=10, n_V=10, p_erd=0.3, p="random", factor=1, p_max=0.8):
@@ -36,3 +37,20 @@ def generate_bipartite_erdos_graph(n_U=10, n_V=10, p_erd=0.3, p="random", factor
     isolated_nodes = list(nx.isolates(B))
     B.remove_nodes_from(isolated_nodes)
     return B, edges
+
+
+def results_to_df(results):
+    data = []
+    
+    for p_value, u_n_dict in results.items():
+        for u_n, p_erd_dict in u_n_dict.items():
+            for p_erd, scores in p_erd_dict.items():
+                row = (p_value, u_n, p_erd) + tuple(scores.values())
+                data.append(row)
+
+    columns = ["p_value", "U_n", "p_erd"] + list(results[next(iter(results))][next(iter(results[next(iter(results))]))][next(iter(results[next(iter(results))][next(iter(results[next(iter(results))]))]))].keys())
+    
+    df = pd.DataFrame(data, columns=columns)
+    df.set_index(["p_value", "U_n", "p_erd"], inplace=True)
+    
+    return df
