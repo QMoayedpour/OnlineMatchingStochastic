@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import networkx as nx
 
 
-def plot_bipartite_graph(graph, U, V, save_fig=False):
+def plot_bipartite_graph(graph, U, V, save_fig=False, disp=False):
 
     pos = nx.drawing.layout.bipartite_layout(graph, nodes=U)
 
@@ -23,5 +23,6 @@ def plot_bipartite_graph(graph, U, V, save_fig=False):
     plt.title("", fontsize=14)
     if save_fig:
         plt.savefig(save_fig)
-    plt.show()
+    if disp:
+        plt.show()
 
