@@ -32,15 +32,9 @@ class OnlineMatchingEvaluator:
 
             chosen_u = self.algorithm(v, edges, self.successful_assignments)
 
-            if chosen_u == "nill":
-                continue
-
-            if chosen_u and (v, chosen_u, self.graph[v][chosen_u]['weight']) in edges:
-                success = random.uniform(0, 1) < self.graph[v][chosen_u]['weight']
-
-                if success and chosen_u not in self.successful_assignments:
-                    self.score += 1
-                    self.matched.add((v, chosen_u))
-                    self.successful_assignments[chosen_u] = True 
+            if chosen_u:
+                self.score += 1
+                self.matched.add((v, chosen_u))
+                self.successful_assignments[chosen_u] = True 
 
         return self.score

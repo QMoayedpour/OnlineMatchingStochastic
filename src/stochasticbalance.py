@@ -1,3 +1,5 @@
+import random
+
 class StochasticBalance:
     def __init__(self, edges):
         self.u_edges = [edge[0] for edge in edges]
@@ -14,7 +16,13 @@ class StochasticBalance:
         edges = self.filter_edges(edges, set_u)
         selected_u, prob = find_min_load(self.loads, edges)
         self.loads[selected_u] += prob
-        return selected_u
+
+        success = random.uniform(0, 1) < prob
+
+        if success and selected_u != "nill" and selected_u not in set_u:
+            return selected_u
+
+        return None
 
 
 def find_min_load(loads, edges):
