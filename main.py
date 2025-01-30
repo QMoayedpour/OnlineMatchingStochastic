@@ -23,7 +23,7 @@ def main(plot=True):
         "names": ['Naive', 'NonAdaptive', 'NaiveAdaptive', 'StochasticBalance', 'SemiAdaptative'],
         "p_values": ["random", 0.5, 0.1, 0.05], # Not the classical p values...
         "U_n": [20, 50, 150],
-        "p_erd": [0.2, "n", "logn/n"],
+        "p_erd": [0.2, "sparse", "highly"],
         "k": 20,
         "p_max":0.1 # Proba max dans un edge dans le cas random
         }  
@@ -32,7 +32,8 @@ def main(plot=True):
 
     df_results = results_to_df(results)
 
-    df_results.round(2).to_csv("./results.csv")
+    df_results.round(2).to_csv("./figs/results.csv")
+    df_results.round(2).to_latex("./figs/results.tex")
 
 if __name__ == "__main__":
     main()
