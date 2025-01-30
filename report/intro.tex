@@ -1,0 +1,80 @@
+ \documentclass[11pt]{article}
+\usepackage{theme}
+\usepackage{shortcuts}
+\usepackage{cancel}
+\usepackage{multirow}
+\usepackage{stmaryrd}
+
+\usepackage{setspace}
+\usepackage{titling}
+\usepackage{lipsum}
+
+
+\usepackage{tikz}
+\usepackage{algorithm} 
+\usepackage{algpseudocode} 
+\usepackage{titling}
+
+\usepackage{hyperref}
+\usepackage[utf8]{inputenc}
+\usepackage[backend=biber, style=authoryear, sorting=ydnt, giveninits=true, maxnames=1, minnames=1]{biblatex}
+\addbibresource{references.bib}
+\setlength\bibitemsep{0.8\baselineskip} % Définit l'espacement entre les références 
+\DeclareNameAlias{author}{given-family}
+
+
+\usepackage{graphicx} % Required for inserting images
+\usepackage{subcaption}
+
+\setlength{\droptitle}{-2cm}
+
+\setstretch{1} %changer aux besoins
+\title{\fontsize{20pt}{10pt} \selectfont  Detecting Changes in Slope With an $L_0$ penalty}
+
+\author{
+    \small Sacha HAKIM \email{sacha.hakim@dauphine.eu} \\
+    \small Quentin MOAYEDPOUR \email{qmoayedpour@ensae.fr}}
+
+\date{\small January 2024}
+
+
+
+
+
+\begin{document}
+
+\maketitle
+
+\section*{Abstract}
+
+This document is the final project report for the Machine Learning for Time Series course, taught by L. Oudre and C. Truong as part of the MVA research master's program. This project focuses on the review of the article \citetitle{maidstone2019} \parencite{maidstone2019}. In this report, we will first introduce the scientific context of this article and our contributions, then we will explain the method introduced by the authors, present the data on which we have implemented it, and finally state and analyze the results of our implementation. 
+
+
+\section*{Abstract}
+
+This document is the final project report for the Machine Learning for Time Series course, taught by L. Oudre and C. Truong as part of the MVA research master's program. This project focuses on the review of the article \citetitle{maidstone2019} \parencite{maidstone2019}. In this report, we will first introduce the scientific context of this article and our contributions, then we will explain the method introduced by the authors, present the data on which we have implemented it, and finally state and analyze the results of our implementation. 
+
+\section{Introduction and contributions}
+
+\subsection{Historical review of research on change point detection }
+
+In many fields, we are led to observe non-homogeneous time series that necessitate to be analyzed. \textit{Change Point Detection (CPD)} makes this task much easier by dividing a series into several homogeneous segments, which is why it has attracted so much interest. CPD also involves choosing the right number of change points since, in many real-world applications, this is not known a priori. The solutions proposed in the literature generally consist of minimizing a cost function either with a penalty or under a constraint of a maximum number of segments (or both). Let's take a brief historical look at the advances made in research into this subject until the publication of \textcite{maidstone2019}.
+
+The \textit{Binary Segmentation (BS)} method introduced by \textcite{scott1974} was the first notable one to provide an efficient approximate resolution of the penalized CPD problem. It roughly consists of recursively dividing segments into two homogeneous subsegments. Although suboptimal, it gives convincing results in the context of mean change detection and is very efficient (quasi-linear complexity in the length $n$ of the time series). Other methods based on \textit{Dynamic Programming (DP)} were soon developed to find an optimal segmentation in the case of a cost function written as a sum of segment-specific costs. Notably, the \textit{Segment Neighborhood (SN)} method of \textcite{auger1989} first allowed to find optimal change points with a computational cost $\mathcal{O}(Kn^2)$ where $K$ is the maximum number of optimal change points to be searched. The \textit{Optimal Partioning (OP)} method was later introduced by \textcite{jackson2005}, permitting to minimize a penalized sum of segment-specific costs with quadratic complexity $\mathcal{O}(n^2)$. 
+
+Although the SN and OP algorithms are optimal, the BS algorithm remained the most widely used due to its simplicity and efficiency. A considerable advance was provided by \textcite{killick2012}, taking inspiration from the OP algorithm and reducing its complexity through inequality based pruning to build the \textit{Pruned Exact Linear Time (PELT)} algorithm. This algorithm solves the same type of problem as OP, with much better complexity, up to linear under reasonable conditions. It remains less efficient than the BS algorithm, but provides much more convincing results. Following the same principle, \textcite{maidstone2017} presented the \textit{Functional Pruned Optimal Partitioning (FPOP)} algorithm, this time using functional based pruning. This algorithm is also optimal, and is quite competitive in terms of complexity, even rivalling the BS algorithm. In 2019 (and even today), the PELT and FPOP algorithms are state-of-the-art. 
+
+\subsection{Task to solve and contributions of the article}
+
+State-of-the-art algorithms such as PELT and FPOP can be applied to a wide range of cost functions, enabling the detection of various types of change points. In particular, they have proved highly effective for mean change detection (the most common task of CPD) which concretely consists of fitting a piecewise constant mean function to the data. However, such modeling may not be very relevant for certain types of time series. In particular, we quite often observe series whose mean evolves continuously rather than by jumps (evolution of biomarkers, demographic growth of a population, ...), which motivates us to try fitting a continuous-piecewise-linear mean function instead. 
+
+With the PELT and FPOP algorithms, we could at best attempt to fit a (discontinuous) piecewise linear function by modeling each segment according to a linear regression model with an intercept and a time covariate (this means using a linear cost). However, it is impossible to apply these algorithms (as well as all classical CPD algorithms using DP) to fit a continuous piecewise linear function. Indeed, the continuity imposes a dependence of successive segments on the value of the fitting function at change points, making the Bellman equation used in these algorithms inapplicable. 
+
+\textcite{maidstone2019} are the first to propose a practically usable solution to this problem through their \textit{Continuous-piecewise-linear Pruned Optimal Partitioning (CPOP)} algorithm. This algorithm uses DP and two pruning processes, functional-based and inequality-based, to efficiently solve the problem. It allows to find optimal change points under a $L_0$ penalty (penalty on the number of change points), while being computationally feasible on fairly large series.
+
+
+\subsection{Our contributions and work distribution}
+
+SOUS-SECTION A FAIRE 
+
+\end{document}

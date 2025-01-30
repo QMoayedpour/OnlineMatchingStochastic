@@ -1,0 +1,425 @@
+%--- Preamble ---------------------------------------------------------%
+% Load LaTeX packages
+\documentclass[10pt, xcolor=dvipsnames]{beamer}
+\usepackage[absolute, overlay]{textpos}                           % supports floating text in any location
+\usepackage[utf8]{inputenc}
+\usepackage{tikz}
+\usepackage{multirow}
+\usepackage{ulem}
+\usepackage{subcaption}
+\usepackage{algorithm}
+\usepackage{tikz}
+\usepackage{algpseudocode}
+\usepackage{csquotes,xpatch}% recommended
+%\usepackage[english]{babel}
+%\usepackage[american]{babel}
+\usepackage[english]{babel}
+\usepackage{graphicx}
+\usepackage{tabularx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage[backend=biber, style=authoryear, sorting=ydnt, giveninits=true, maxnames=1, minnames=1]{biblatex}
+\setlength\bibitemsep{0.25\baselineskip} % Définit l'espacement entre les références 
+\DeclareNameAlias{author}{given-family}
+\addbibresource{references.bib}
+
+% Customize theme attributes
+\useoutertheme{infolines}					                     % adds 3 box footer
+\usetheme[height=7mm]{Rochester} 				                 % choose theme
+\setbeamertemplate{blocks}[rounded][shadow=true] 		         % rounded theorem box with shadow
+\setbeamertemplate{caption}[numbered]                             % enable counting of tables/figures
+
+% Define template colors
+\definecolor{QPblue}{RGB}{0,25,100}                               % define QP blue using RGB code
+\definecolor{QPgreen}{RGB}{0,153,110}                             % define QP green using RGB code
+\setbeamercolor{title}{fg=white, bg=QPblue}                       % define title page box color
+\setbeamercolor{frametitle}{fg=white, bg=QPblue}                  % define frame title color
+\setbeamercolor{normal text}{fg=black}                            % define standard font color
+\setbeamercolor{author in head/foot}{fg=QPblue, bg=QPblue!75}    % define infoline 1st box color
+\setbeamercolor{title in head/foot}{fg=QPblue, bg=QPblue!60}     % define info line 2nd box color
+\setbeamercolor{date in head/foot}{fg=QPblue, bg=QPblue!30}	  % define infoline 3rd box color
+\setbeamercolor{block title}{fg=QPblue!50!QPgreen, bg=QPblue!30} % define theorem box title color
+\setbeamercolor{block body}{fg=QPblue!50!QPgreen, bg=gray!10}	 % define theorem box body color
+\setbeamercolor{local structure}{fg=QPblue!75}		           % define bullet and enumerate list colors
+
+% Réafficher le plan progressivement
+\AtBeginSection[]{
+    \begin{frame}
+        \frametitle{Table of contents}
+        \tableofcontents[currentsection] % Affiche uniquement la section courante
+    \end{frame}
+}
+
+\AtBeginSubsection[]{
+    \begin{frame}
+        \frametitle{Table of contents}
+        \tableofcontents[currentsection, subsectionstyle=show/shaded] % Affiche la section et met en évidence la sous-section courante
+    \end{frame}
+}
+
+% Define global environments
+\newenvironment{reference}[2]{                                    % define environment for footnotes
+  \begin{textblock*}{\textwidth}(#1, #2)
+      \tiny\it\bgroup\color{red!70!QPblue}}{\egroup\end{textblock*}}
+
+% Define title page logo and project metadata
+%\titlegraphic{\includegraphics[width=3cm]{UNINOVE_LOGO.JPG}\hspace*{0cm}~}
+
+\title{Detecting Changes in Slope With an $L_0$ penalty}
+\author{Sacha HAKIM, Quentin MOAYEDPOUR}
+\institute[]{
+   \textcolor{QPblue!75}{M2 MVA - École Normale Supérieure Paris-Saclay \\ Machine Learning for Time Series
+   \texttt{}} \\ [1ex]
+}
+\date{Janvier 2025}
+
+\begin{document}
+%--- Title Page -------------------------------------------------------%
+\begin{frame}[plain]
+  \titlepage
+\end{frame}
+
+
+% ------- SECTION 1 -------
+\section{Context and Motivation}
+
+\begin{frame}{Context}
+
+\textbf{Change Point Detection (CPD):} 
+\begin{itemize}
+    \item Split a time series into homogeneous sub-series.
+    \item Mathematically: Minimize a segmentation cost.
+    \item Number of change points? Maximum constrain or penalty (or both).
+\end{itemize} 
+
+\vspace{0.5cm}
+
+\textbf{Literature preceding \textcite{maidstone2019}:}
+\begin{itemize}
+    \item Binary Segmentation \parencite{scott1974}
+    \item Segment Neighborhood \parencite{auger1989}
+    \item Optimal Partitioning \parencite{jackson2005}
+    \item PELT algorithm \parencite{killick2012}
+    \item FPOP algorithm \parencite{maidstone2017}
+
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}{Motivation}
+\begin{itemize}
+    \item CPD highly depends on homogeneity metric.
+    \item Fit a piecewise linear function to data? Use a linear cost:
+    $$
+    \mathcal{C}_{lin}(y_{s+1:t}) = \min\limits_{\beta \in \mathbb{R}^2} \sum_{i=s+1}^t (y_i - \beta_0 - \beta_1 i)^2.
+    $$
+    \item What if we also want continuity? (demographic growth, evolution of biomarkers, stock price, ...).
+    \item \textbf{Problem:} Continuity imposes the dependence of successive segments in the value of the fitting function. Classical dynamic programming approaches not applicable.
+    \item \textbf{Idea of the authors:} Drawing inspiration from PELT and FPOP to build an adapted (and computationally efficient) approach. 
+\end{itemize}
+\end{frame}
+
+
+
+
+% ------ SECTION 2 -----------
+
+\section{Model and Method}
+
+\begin{frame}{Model and Cost}
+\begin{itemize}
+
+\item Continuous piecewise linear function fitting problem = parameter estimation problem
+
+\item We model $y=\{y_t\}_{t=1}^n$ as the noisy discrete observation of a continuous piecewise linear function:
+$$
+\forall t \in \llbracket \tau_i +1, \tau_{i+1} \rrbracket, \ y_t \sim \phi_i + \frac{\phi_{i+1} - \phi_i}{\tau_{i+1} - \tau_i}(t-\tau_i) + Z_t,
+$$
+with $Z$ independent centered noise of (known) variance $\sigma^2 >0$.
+
+\item Estimate the parameters? Define a cost that compromises between good fit and simplicity (needs a penalty). 
+
+\item We will try to minimize (over $\tau^m, \phi$):
+$$
+\mathcal{V}(\tau^m, \phi; y) = \sum_{i=0}^m \left(\mathcal{C}(y_{\tau_i +1:\tau_i}, \phi_i, \phi_{i+1}) + h(\tau_{i+1} - \tau_i) + \beta \right),
+$$
+where $\mathcal{C}$ is defined as:
+$$
+\mathcal{C}(y_{s+1:t}, \phi, \psi) = \frac{1}{\sigma^2} \sum_{i=s+1}^t \left( y_i - \phi - \frac{\psi - \phi}{t-s}(j-s) \right)^2.
+$$
+\end{itemize}
+\end{frame}
+
+
+
+\begin{frame}{Dynamic Programming Approach}
+\begin{itemize}
+\item Minimal cost of $y_{1:t}$ for fitting a function with last value $\phi$, satisfies a Bellman equation:
+$$
+ f^t(\phi) = \min\limits_{0\leq s <t, \phi' \in \mathbb{R}} f^s(\phi') + \mathcal{C}(y_{s+1:t}, \phi', \phi) + h(t-s) + \beta.
+$$
+\item Minimal cost of $y_{1:t}$ for fitting a function with change points $\tau^k$ and last value $\phi$, also satisfies a Bellman equation:
+$$
+f^t_{\tau^k}(\phi) = \min\limits_{\phi' \in \mathbb{R}}  f_{\tau_{1:k-1}}^{\tau_k}(\phi') + \mathcal{C}(y_{\tau_k+1:t}, \phi', \phi) + h(t - \tau_k) + \beta.
+$$
+
+\item Functions $f_{\tau^k}^t$ strictly convex quadratic, computable quadratic coefficients by recurrence. 
+
+\item \textbf{First idea:} 
+    \begin{itemize}
+        \item Compute optimal values $\phi_{\tau}^*$ for all change points set $\tau$ (recursive minimization of strictly convex quadratics).
+        \item Minimize $\mathcal{V}(\tau, \phi_{\tau}^*;y)$ over $\tau$.
+        \item Too complex... 
+    \end{itemize}
+\end{itemize}
+\end{frame}
+
+
+
+\begin{frame}{Pruning Techniques}
+\begin{itemize}
+    \item Let $\mathcal{T}_t^*=\left\{\tau\in \mathcal{T}_t \:\big|\: \exists\phi\in\mathbb{R}, f^t(\phi)=f_{\tau}^t(\phi)\right\}$. 
+    \item \textbf{Functional pruning:} 
+    $
+    \tau \notin \mathcal{T}_s ^* \implies \tau \cup \{s\} \notin \mathcal{T}_t ^* \quad \forall s < t. 
+    $
+    \item \textbf{Inequality-based pruning:} Assume $h \geq 0$ and nonincreasing. Set $K=2\beta + h(1) + h(n)$.
+    $$ \min\limits_{\phi \in \mathbb{R}} f_{\tau}^s(\phi) > \min_{\phi \in \mathbb{R}} f^s(\phi) + K 
+    \implies  \min\limits_{\phi \in \mathbb{R}} f_{\tau}^t(\phi) > \min_{\phi \in \mathbb{R}} f^t(\phi) \quad \forall s<t.
+    $$
+    \item We define $\hat{\mathcal{T}}_t$ recursively:
+        \begin{itemize}
+        \item $\hat{\mathcal{T}}_1 \leftarrow \{\emptyset\}$
+        \vspace{0.5}
+        \item $\hat{\mathcal{T}}_{t+1} \leftarrow \hat{\mathcal{T}}_t \cup \{\tau \cup \{t\} : \tau \in \mathcal{T}_t^* \}$
+        \vspace{0.5}
+        \item $\hat{\mathcal{T}}_{t+1} \leftarrow \left\{ \tau \in \hat{\mathcal{T}}_{t+1} \bigg| \min\limits_{\phi \in \mathbb{R}} f_{\tau}^t(\phi) \leq \min\limits_{\phi \in \mathbb{R}} f^t(\phi) + K \right\}$
+        \end{itemize}
+
+    The two prunings tell us that $\mathcal{T}_t ^* \subset \hat{\mathcal{T}}_t$.
+
+    \item In practice, we can easily compute $\mathcal{T}_t^*$ from $\hat{\mathcal{T}}_t$ with line search. Thus we can compute $\mathcal{T}_n ^*$ recursively. 
+\end{itemize}
+\end{frame}
+
+
+\begin{frame}{CPOP Algorithm}
+The authors built the CPOP algorithm from the previous ideas. 
+\begin{itemize}
+    \item $\hat{\mathcal{T}}_1 \leftarrow \emptyset$.
+    \item Recursively compute $\mathcal{T}_t^*$ with line search and then $\hat{\mathcal{T}}_{t+1}$ from the previous formula. 
+    \item The best change points set is within $\mathcal{T}_n^*$. One only needs to minimize $| \mathcal{T}_n^* |$ strictly convex quadratics and compare the minimal values.
+    \item We can then compute the $\phi_{\tau^*}^*$ by minimizing recursively $f_{\tau^*_{1:k-1}}^{\tau_k ^*}$.
+\end{itemize}
+\end{frame}
+
+
+\section{Application}
+\begin{frame}{CPOP on synthetic data}
+
+% On montre simplement a quoi ressemblent des données générées selon le modèle, on mentionne que sur les données générées on n'a pas énormément de diversité (puisque on impose une trend lineaire) mais qu'on s'en sert dans un premier temps pour voir comment les parametres (beta et sigma) font varier nos estimations
+
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.8\linewidth]{diapo/plot_img.png}
+
+    \label{fig:enter-label}
+\end{figure}
+    
+\end{frame}
+
+\begin{frame}{CPOP on synthetic data}
+
+
+% Tout d'abord on mentionne le fait que on ne connait pas sigma mais c'est un paramètres du modèle, et pour l'estimer "proprement" on a besoin d'avoir le modèle déja identifié. On montre que son choix a un grand impact. Dans les figures ici, respectivement: sigma sous estimé, vrai sigma, sigma surestimé, sigma sur sur estimé
+
+
+    \begin{figure}
+        \centering
+        \includegraphics[width=0.8\linewidth]{diapo/sigma_values.png}
+        \caption{Estimations for different values of $\sigma$}
+        \label{fig:enter-label}
+    \end{figure}
+\end{frame}
+
+\begin{frame}{CPOP on synthetic data}
+
+% Ensuite, on montre que sigma ne doit pas être determiné seul car il agit conjointement avec beta. IE voir la formule on peut normaliser le sigma a 1 en faisant le changement de variable en beta et h.
+%ici le vrai sigma  est 5 mais un bon sigma n'est pas suffisant pour avoir de bonnes estimations
+
+    \[min \sum_{i=0}^m \left[\frac{1}{\sigma^2}\sum_{t=\tau_i+1}^{\tau_{i+1}} \left(y_t-\phi_{\tau_i}-\frac{\phi_{\tau_{i+1}}-\phi_{\tau_i}}{\tau_{i+1}-\tau_i}(t-\tau_i)\right)^2 + h(\tau_{i+1}-\tau_i)\right]+\beta m\]
+\[\Leftrightarrow min \sum_{i=0}^m \left[\sum_{t=\tau_i+1}^{\tau_{i+1}} \left(y_t-\phi_{\tau_i}-\frac{\phi_{\tau_{i+1}}-\phi_{\tau_i}}{\tau_{i+1}-\tau_i}(t-\tau_i)\right)^2 + \tilde{h}(\tau_{i+1}-\tau_i)\right]+\tilde{\beta} m\]
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.8\linewidth]{diapo/sigmaandbeta.png}
+
+    \label{fig:enter-label}
+\end{figure}
+    
+\end{frame}
+
+    
+
+\begin{frame}{Jointly estimate $\sigma$ and $\beta$}
+
+% Comment choisir beta et sigma? On aimerait jouer avec des critères statistiques (car le modèle admet une representation en modele dont on peut extraire la vraisemblance. En supposant que les résidus sont gaussiens, on peut calculer différents critères d'informations. Une stratégie simple qu'on a testé est de partir d'une estimation de sigma (par median absolute deviation de l'incrément de la série) et de partir d'une faible valeur de beta vers une plus grande en reestimant sigma a chaque fois (ecart type de l'erreur d'approximation du modèle) et en sélectionnant le couple sigma et beta qui minimisent le critère d'information
+
+
+Choose a criterion:
+\begin{itemize}
+    \item $AIC = - 2 \mathcal{L}(y|\beta, \sigma) + 2|\tau|$
+    \item $AIC_{L_2} = - 2 \mathcal{L}(y|\beta, \sigma) + \sigma^2|\tau|$
+    \item $BIC = - 2 \mathcal{L}(y|\beta, \sigma) + |\tau|log(n)$
+    \item $mBIC = - 2 \mathcal{L}(y|\beta, \sigma) + 6|\tau|log(n) + \sum_{k=0}^{|\tau|+1} \log \left( \frac{t_{k+1} - t_k}{T} \right)$
+\end{itemize}
+
+Run the algorithm:
+\begin{algorithmic}
+\State \textbf{Input:} $list_{\beta}$, $y$
+\State $ \sigma_{\text{curr}} \gets \text{MAD}(\text{DIFF}(y)) $
+\For{$\beta \quad in  \quad list_{\beta}$}
+    \State $\text{detector.run}(\sigma = \sigma_{\text{curr}}, \beta)$
+    \State $ \sigma_{\text{curr}} \gets \text{detector.update\_sigma}() $
+    \State $ \text{criterion}[\beta] \gets \text{detector.criterion}() $
+\EndFor
+\State $\beta_{\text{min}}, \sigma_{\text{min}} \gets \arg\min_{\beta, \sigma} \, \text{criterion}[\beta]$
+\State \textbf{Return:} $ (\beta_{\text{min}}, \sigma_{\text{min}}) $
+\end{algorithmic}
+    
+\end{frame}
+
+\begin{frame}{Jointly estimate $\sigma$ and $\beta$}
+
+% Quelques résultats de cette méthode sur des séries générées, (on voit pas bien mais généralement le sigma estimé est assez proche du vrai sigma),  les estimations sont sensibles au choix du critère de selection (trivial un peu): AIC tends un peu a overfiter, BIC et mBIC pénalisent parfois trop le modèle.
+
+
+    \begin{figure}
+        \centering
+        \includegraphics[width=0.9\linewidth]{diapo/updsigmaaa.png}
+        \caption{Caption}
+        \label{fig:enter-label}
+    \end{figure}
+\end{frame}
+
+\begin{frame}{CPOP on real data}
+
+% Application sur des "vraies" données issues d'un benchmark de CPOP, on a sélectionn des séries dont on pouvait distinguer des trends linéaires (sauf pour la derniere euro stoxx price) Approche visuelle, le but étant de voir comment marche notre méthode sur des vraies données, si les résultats sont satisfaisants
+% Noter que avec eurostoxx 50, on voit bien que le modèle n'est pas adapté a la série et la sélection par le critère d'information statistique n'est pas appropriée
+
+
+\begin{figure}[htbp]
+    \centering
+    % Ligne 1 : deux sous-figures côte à côte
+    \begin{subfigure}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{images/annexe/gdp_argentina.png}
+        \caption{Argentina's GDP}
+        \label{fig:subfig1}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{images/annexe/gdp_iran.png}
+        \caption{Iran's GDP}
+        \label{fig:subfig2}
+    \end{subfigure}
+
+    \vspace{0.5cm} % Espacement vertical entre les deux lignes
+
+    % Ligne 2 : deux sous-figures côte à côte
+    \begin{subfigure}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{images/annexe/bitcoin_mbic.png}
+        \caption{Bitcoin Price.}
+        \label{fig:subfig3}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{images/annexe/eurostock.png}
+        \caption{EuroStoxx50 price}
+        \label{fig:subfig4}
+    \end{subfigure}
+
+    \label{fig:gridfigure}
+\end{figure}
+
+\end{frame}
+
+\begin{frame}{CPOP vs PELT}
+
+
+% Quelle est l'avantage de l'hypothèse de continuité? Comparaison avec PELT, on ne détecte pas les même changepoints, Commenter brièvement
+
+
+\begin{figure}[htbp]
+    \centering
+    % Ligne 1 : deux sous-figures côte à côte
+    \begin{subfigure}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{diapo/pelt1.png}
+
+        \label{fig:subfig1}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{diapo/cpop1.png}
+
+        \label{fig:subfig2}
+    \end{subfigure}
+
+    \vspace{0.5cm} % Espacement vertical entre les deux lignes
+
+    % Ligne 2 : deux sous-figures côte à côte
+    \begin{subfigure}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{diapo/plt2.png}
+
+        \label{fig:subfig3}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{diapo/cpop2.png}
+
+        \label{fig:subfig4}
+    \end{subfigure}
+
+    \label{fig:gridfigure}
+\end{figure}
+
+\end{frame}
+
+\section{Conclusion}
+
+\begin{frame}{Conclusion}
+
+\begin{itemize}
+    \item The majority of the time was spent on implementing and gaining a clear understanding of the paper
+    \item Clear pseudo-algorithm but limited details are provided on the calculation of the coefficients
+    \item Implementation on Python using dictionnaries to store the coefficients:
+    \begin{itemize}
+        \item Not the best for computing the min over a set of keys
+        \item May suffer from lack of memory on very large time serie
+        \item In practice, no problems of time or  computational ressource 
+    \end{itemize}
+    \item Statistical criterion for justification of the choice of the parameters
+    \item Not a general model, need to be apply on specific time series (Linear Trends)
+    \item Not robust to outliers
+\end{itemize}
+\end{frame}
+
+
+
+
+\section{References}
+\begin{frame}[allowframebreaks]{References}
+    \footnotesize
+    \printbibliography
+\end{frame}
+
+
+\end{document}
